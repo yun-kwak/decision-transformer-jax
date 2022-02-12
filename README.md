@@ -11,7 +11,7 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 - The dependency management of this project is based on Conda + pip-tool.
 - The name of the Conda environment can be specified in the `Makefile` by changing the `CONDA_ENV` (Default: decision-transformer-jax)
 - To create an environment using GPU, run followinng command: `make gpu-env`or just `make` (Default: GPU)
-- For CPU env, run: `make cpu-env`
+- For CPU env, run: `make cpu-env`. _TPU is not supported yet._
 - Activate the installed environment by running `conda activate research`(or the environment name you specified)
 - Download and install ROM `wget http://www.atarimania.com/roms/Roms.rar && unrar e -r Roms.rar && python -m atari_py.import_roms .`
 - Enjoy!👋
@@ -28,7 +28,7 @@ Yun-hyeok Kwak(yunhyeok.kwak@gmail.com)
 
 ## Credits
 
-- Lili Chen*, Kevin Lu*, et al. "Decision transformer: Reinforcement learning via sequence modeling." Neural Information Processing Systems (2021). [arxiv](https://arxiv.org/abs/2106.01345)
+- Lili Chen*, Kevin Lu*, et al. "Decision transformer: Reinforcement learning via sequence modeling." Neural Information Processing Systems (2021). [arXiv](https://arxiv.org/abs/2106.01345)
 - [Original implementation](https://github.com/kzl/decision-transformer/), licensed under the MIT License
 - [Karpathy's minGPT](https://github.com/karpathy/minGPT), licensed under the MIT license
 - [mgrankin's minGPT](https://github.com/mgrankin/minGPT), licensed under the Apache License 2.0
