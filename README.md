@@ -26,6 +26,9 @@ Alternatively, you can set up the project using auto-generated `requirements-cpu
 ### Training
 
 ### Evaluating pre-trained model
+
+### Testing
+
 ## Author
 
 Yun-hyeok Kwak(yunhyeok.kwak@gmail.com)

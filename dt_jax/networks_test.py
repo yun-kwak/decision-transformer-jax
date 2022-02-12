@@ -1,3 +1,5 @@
+import test_with_cpu  # noqa: F401  # isort:skip
+
 import haiku as hk
 import jax
 import jax.numpy as jnp

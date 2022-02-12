@@ -1,3 +1,4 @@
+import test_with_cpu  # noqa: F401  # isort:skip
 from pprint import pprint
 
 import haiku as hk

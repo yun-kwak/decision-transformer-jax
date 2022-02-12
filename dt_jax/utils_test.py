@@ -1,3 +1,4 @@
+import test_with_cpu  # noqa: F401  # isort:skip
 from unittest import mock
 
 import jax
