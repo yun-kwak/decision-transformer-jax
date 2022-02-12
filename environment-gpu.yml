@@ -1,0 +1,11 @@
+name: decision-transformer-jax
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.8
+  - cudatoolkit=11.1
+  - cudnn=8.2
+  - pip
+  - pip:
+    - pip-tools

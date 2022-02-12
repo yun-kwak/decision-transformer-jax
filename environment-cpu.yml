@@ -1,0 +1,8 @@
+name: decision-transformer-jax
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - pip
+  - pip:
+    - pip-tools

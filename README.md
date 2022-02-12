@@ -1,2 +1,43 @@
-# decision-transformer-jax
-decision-transformer-jax
+# Decision Transformer in JAX and Haiku
+
+Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Modeling' in JAX and Haiku, based on the paper at <https://arxiv.org/abs/2106.01345>.
+
+## Result
+
+# Github commit message
+
+## Usage
+
+### Setup
+
+- The dependency management of this project is based on Conda + pip-tool.
+- The name of the Conda environment can be specified in the `Makefile` by changing the `CONDA_ENV` (Default: decision-transformer-jax)
+- To create an environment using GPU, run followinng command: `make gpu-env`or just `make` (Default: GPU)
+- For CPU env, run: `make cpu-env`
+- Activate the installed environment by running `conda activate research`(or the environment name you specified)
+- Download and install ROM `wget http://www.atarimania.com/roms/Roms.rar && unrar e -r Roms.rar && python -m atari_py.import_roms .`
+- Enjoy!👋
+- You can **change the requirements** of project by editing files under `requirements` folder, then rerun the command(`make gpu-env` or `make cpu-env`). Thanks to pip-tools, the changes can be quickly applied to the environment.
+
+or you can set up the project by using auto-generated `requirement.txt`
+`pip install -r requirements.txt` (tested in python=3.8, cudatoolkit=11.1, cudnn=8.2)
+
+### Training
+
+### Evaluating pre-trained model.
+## Author
+
+Yun-hyeok Kwak(yunhyeok.kwak@gmail.com)
+
+## Credits
+
+- [The paper](https://arxiv.org/abs/2106.01345)
+- [Original implementation](https://github.com/kzl/decision-transformer/), licensed under the MIT License
+- [Karpathy's minGPT](https://github.com/karpathy/minGPT), licensed under the MIT license
+- [mgrankin's minGPT](https://github.com/mgrankin/minGPT), licensed under the Apache License 2.0
+
+## License
+
+MIT License
+
+Copyright (c) 2022 Yun-hyeok Kwak

@@ -1,0 +1,28 @@
+# Production requirements
+
+# JAX Ecosystem
+dm-haiku
+optax
+chex
+tensorflow
+dopamine-rl
+
+numpy
+opencv-python-headless>=4.4
+scipy
+pandas
+cloudpickle
+scikit-learn
+matplotlib
+Cython
+tqdm
+future
+protobuf
+pyyaml
+psutil
+pillow
+joblib
+ml-collections
+
+# Project-specific dependencies
+atari-py
