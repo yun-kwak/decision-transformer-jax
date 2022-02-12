@@ -4,8 +4,6 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 
 ## Result
 
-# Github commit message
-
 ## Usage
 
 ### Setup
