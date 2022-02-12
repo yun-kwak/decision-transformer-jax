@@ -1,3 +1,4 @@
+import os
 from unittest import mock
 
 import jax
@@ -6,6 +7,8 @@ import numpy as np
 from absl.testing import absltest, parameterized
 from jax import jit, vmap
 from utils import sample, top_k_logits
+
+os.environ["JAX_PLATFORM_NAME"] = "cpu"
 
 
 class TopKLogitsTest(parameterized.TestCase):
