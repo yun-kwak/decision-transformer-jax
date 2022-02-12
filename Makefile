@@ -33,12 +33,12 @@ conda-env-update:
 
 # Compile exact pip packages
 pip-compile:
-	$(CONDA_ACTIVATE) $(CONDA_ENV) && pip-compile -o requirements.txt -v \
+	$(CONDA_ACTIVATE) $(CONDA_ENV) && pip-compile -o requirements-${DEVICE}.txt -v \
 	requirements/${DEVICE}.in requirements/prod.in requirements/dev.in
 
 # Install pip packages
 pip-sync:
-	$(CONDA_ACTIVATE) $(CONDA_ENV) && pip-sync requirements.txt
+	$(CONDA_ACTIVATE) $(CONDA_ENV) && pip-sync requirements-${DEVICE}.txt
 
 # Install pre-commit
 pre-commit:
