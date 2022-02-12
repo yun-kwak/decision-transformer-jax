@@ -5,7 +5,6 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
-from haiku.typing import PRNGKey
 
 
 def set_global_seed(seed: int, pytorch: bool = True) -> None:
@@ -60,7 +59,7 @@ def sample(
     actions: Optional[jnp.array] = None,
     rtgs: Optional[jnp.array] = None,
     timesteps: Optional[jnp.array] = None,
-    rng: Optional[PRNGKey] = None,
+    rng: Optional[jnp.array] = None,
 ) -> jnp.array:
     """
     Take a conditioning sequence of indices in x (of shape (t,)) and predict the next token in

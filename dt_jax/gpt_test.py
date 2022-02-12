@@ -1,12 +1,9 @@
-import os
 from pprint import pprint
 
 import haiku as hk
 import jax
 from absl.testing import absltest
 from gpt import GPT
-
-os.environ["JAX_PLATFORM_NAME"] = "cpu"
 
 
 class GPTTest(absltest.TestCase):

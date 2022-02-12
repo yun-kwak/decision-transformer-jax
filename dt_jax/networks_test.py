@@ -1,12 +1,8 @@
-import os
-
 import haiku as hk
 import jax
 import jax.numpy as jnp
 from absl.testing import absltest
 from networks import CausalSelfAttention, Dropout, TransformerBlock
-
-os.environ["JAX_PLATFORM_NAME"] = "cpu"
 
 
 class DropoutTest(absltest.TestCase):
