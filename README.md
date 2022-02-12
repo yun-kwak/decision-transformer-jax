@@ -17,9 +17,9 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 - To create an environment using GPU, run followinng command: `make gpu-env`or just `make` (Default: GPU)
 - For CPU env, run: `make cpu-env`. _TPU is not supported yet._
 - Activate the installed environment by running `conda activate research`(or the environment name you specified)
-- Download and install Atari ROMs `wget http://www.atarimania.com/roms/Roms.rar && unrar e -r Roms.rar && python -m atari_py.import_roms .`
+- Download and install Atari ROMs `wget http://www.atarimania.com/roms/Roms.rar && unrar e -r Roms.rar ./Roms/ && python -m atari_py.import_roms ./Roms/ && rm -rf Roms.rar ./Roms/`
 - Enjoy!👋
-- You can **change the requirements** of project by editing files under `requirements` folder, then rerun the command(`make gpu-env` or `make cpu-env`). Thanks to pip-tools, the changes can be quickly applied to the environment.
+- Whenever you want, **the requirements** of the project can be modified by editing files under `requirements` folder, then rerun the command(`make gpu-env` or `make cpu-env`). Thanks to pip-tools, the changes can be quickly applied to the environment.
 
 Alternatively, you can set up the project using auto-generated `requirements-cpu.txt` or `requirement-gpu.txt`: e.g. `pip install -r requirements-gpu.txt` (tested in python=3.8, cudatoolkit=11.1, cudnn=8.2)
 
