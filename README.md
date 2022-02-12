@@ -17,19 +17,18 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 - Enjoy!👋
 - You can **change the requirements** of project by editing files under `requirements` folder, then rerun the command(`make gpu-env` or `make cpu-env`). Thanks to pip-tools, the changes can be quickly applied to the environment.
 
-or you can set up the project by using auto-generated `requirement.txt`
-`pip install -r requirements.txt` (tested in python=3.8, cudatoolkit=11.1, cudnn=8.2)
+Alternatively, you can set up the project by using auto-generated `requirement.txt`: `pip install -r requirements.txt` (tested in python=3.8, cudatoolkit=11.1, cudnn=8.2)
 
 ### Training
 
-### Evaluating pre-trained model.
+### Evaluating pre-trained model
 ## Author
 
 Yun-hyeok Kwak(yunhyeok.kwak@gmail.com)
 
 ## Credits
 
-- [The paper](https://arxiv.org/abs/2106.01345)
+- Lili Chen*, Kevin Lu*, et al. "Decision transformer: Reinforcement learning via sequence modeling." Neural Information Processing Systems (2021). [arxiv](https://arxiv.org/abs/2106.01345)
 - [Original implementation](https://github.com/kzl/decision-transformer/), licensed under the MIT License
 - [Karpathy's minGPT](https://github.com/karpathy/minGPT), licensed under the MIT license
 - [mgrankin's minGPT](https://github.com/mgrankin/minGPT), licensed under the Apache License 2.0
