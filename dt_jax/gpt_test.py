@@ -1,8 +1,8 @@
 import test_with_cpu  # noqa: F401  # isort:skip
-from pprint import pprint
 
 import haiku as hk
 import jax
+import jax.numpy as jnp
 from absl.testing import absltest
 from gpt import GPT
 
@@ -13,7 +13,7 @@ class GPTTest(absltest.TestCase):
             "vocab_size": 128,
             "n_embd": 32,
             "n_layer": 2,
-            "block_size": 10,
+            "context_len": 30,
             "embd_pdrop": 0.1,
             "transformer_config": {
                 "n_embd": 32,
@@ -21,28 +21,35 @@ class GPTTest(absltest.TestCase):
                     "n_layer": 2,
                     "n_head": 2,
                     "n_embd": 32,
-                    "block_size": 10,
+                    "context_len": 30,
                     "attn_pdrop": 0.1,
                     "resid_pdrop": 0.1,
                     "name": "attn",
                 },
                 "resid_pdrop": 0.1,
             },
+            "max_timestep": 200,
+            "model_type": "reward_conditioned",
+            "name": "gpt",
         }
 
-        def _fwd(x, is_training):
+        def _fwd(**x):
             model = GPT(**config)
-            return model(x, is_training)
+            return model(**x)
 
-        fwd = hk.transform_with_state(_fwd)
+        fwd = hk.transform(_fwd)
         seed = 0
         key = jax.random.PRNGKey(seed)
-        key1, key2, key3 = jax.random.split(key, 3)
-        x = jax.random.randint(key1, (3,), 0, 128)
-        params, state = fwd.init(key2, x, is_training=True)
-        out, state = fwd.apply(params, state, x=x, rng=key3, is_training=True)
-        pprint(out)
-        self.assertEqual(out.shape, (3, 128))
+        key1, key2 = jax.random.split(key, 2)
+        context_len = config["context_len"]
+        states = jnp.zeros((context_len, 4 * 84 * 84))
+        actions = jnp.zeros((context_len, 1), dtype=jnp.int32)
+        rtgs = jnp.zeros((context_len, 1))
+        timestep = jnp.zeros((1,), dtype=jnp.int32)
+
+        params = fwd.init(key1, states=states, actions=actions, rtgs=rtgs, timestep=timestep, is_training=True)
+        out = fwd.apply(params, key2, states=states, actions=actions, rtgs=rtgs, timestep=timestep, is_training=True)
+        self.assertEqual(out.shape, (context_len, config["vocab_size"]))
 
 
 if __name__ == "__main__":
