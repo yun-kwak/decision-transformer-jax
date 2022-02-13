@@ -25,7 +25,7 @@ class DropoutTest(absltest.TestCase):
 class CausalSelfAttentionTest(absltest.TestCase):
     def test_forward(self):
         def _fwd(x, is_training):
-            model = CausalSelfAttention(n_layer=2, n_head=2, n_embd=32, block_size=2)
+            model = CausalSelfAttention(n_layer=2, n_head=2, n_embd=32, context_len=2)
             return model(x, is_training)
 
         x = jnp.zeros((3, 32))  # T, n_embd
@@ -44,7 +44,7 @@ class TransformerBlockTest(absltest.TestCase):
             "n_layer": 2,
             "n_head": 2,
             "n_embd": 32,
-            "block_size": 3,
+            "context_len": 3,
             "attn_pdrop": 0.1,
             "resid_pdrop": 0.1,
             "name": "attn",

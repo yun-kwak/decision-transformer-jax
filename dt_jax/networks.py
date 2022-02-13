@@ -27,7 +27,7 @@ class CausalSelfAttention(hk.Module):
         n_layer: int,
         n_head: int,
         n_embd: int,
-        block_size: int,
+        context_len: int,
         attn_pdrop: float = 0.1,
         resid_pdrop: float = 0.1,
         name: Optional[str] = None,
@@ -38,7 +38,8 @@ class CausalSelfAttention(hk.Module):
         self.n_layer = n_layer
         self.n_head = n_head
         self.n_embd = n_embd
-        self.block_size = block_size
+        self.context_len = context_len
+        self.max_block_size = context_len * 3
         self.attn_pdrop = attn_pdrop
         self.resid_pdrop = resid_pdrop
 
@@ -52,7 +53,7 @@ class CausalSelfAttention(hk.Module):
         # output projection
         self.proj = hk.Linear(self.n_embd)
         # causal mask to ensure that attention is only applied to the left in the input sequence
-        self.mask = np.tril(np.ones((self.block_size + 1, self.block_size + 1)))
+        self.mask = np.tril(np.ones((self.max_block_size + 1, self.max_block_size + 1)))
 
     def __call__(self, x, is_training):
         T, C = x.shape  # T: tokens, C: channels
