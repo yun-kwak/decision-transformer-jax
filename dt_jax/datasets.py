@@ -1,8 +1,4 @@
 # flake8: noqa
-"""
-Adapted from https://github.com/google-research/batch_rl/blob/master/batch_rl/fixed_replay/replay_memory/fixed_replay_buffer.py
-"""
-
 import collections
 from concurrent import futures
 
@@ -18,7 +14,10 @@ STORE_FILENAME_PREFIX = circular_replay_buffer.STORE_FILENAME_PREFIX
 
 
 class FixedReplayBuffer:
-    """Object composed of a list of OutofGraphReplayBuffers."""
+    """
+    Object composed of a list of OutofGraphReplayBuffers.
+    Adapted from https://github.com/google-research/batch_rl/blob/master/batch_rl/fixed_replay/replay_memory/fixed_replay_buffer.py
+    """
 
     def __init__(self, data_dir, replay_suffix, *args, **kwargs):  # pylint: disable=keyword-arg-before-vararg
         """Initialize the FixedReplayBuffer class.
@@ -106,6 +105,9 @@ class FixedReplayBuffer:
 
     def add(self, *args, **kwargs):  # pylint: disable=unused-argument
         pass
+
+
+# Below are adapted from https://github.com/kzl/decision-transformer/
 
 
 class StateActionReturnDataset(Dataset):
