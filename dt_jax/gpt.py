@@ -165,5 +165,5 @@ def cross_entropy(logits, targets):
 
 def loss_fn(func, states, actions, targets, rtgs, timestep, is_training=True):
     return cross_entropy(
-        jax.vmap(func, in_axes=[0, 0, 0, 0, None](states, actions, rtgs, timestep, is_training)), targets
+        jax.vmap(func, in_axes=[0, 0, 0, 0, None])(states, actions, rtgs, timestep, is_training), targets
     )
