@@ -1,3 +1,5 @@
+from typing import Dict, Optional
+
 import haiku as hk
 import jax
 import jax.numpy as jnp
@@ -6,7 +8,16 @@ from networks import Dropout, TransformerBlock
 
 class GPT(hk.Module):
     def __init__(
-        self, vocab_size, n_embd, n_layer, context_len, max_timestep, embd_pdrop, transformer_config, model_type, name
+        self,
+        vocab_size: int,
+        n_embd: int,
+        n_layer: int,
+        context_len: int,
+        max_timestep: int,
+        embd_pdrop: int,
+        transformer_config: Dict,
+        model_type: str,
+        name: Optional[str] = None,
     ):
         super().__init__(name)
         self.vocab_size = vocab_size
@@ -56,6 +67,7 @@ class GPT(hk.Module):
         self.global_pos_emb = hk.get_parameter(
             "global_pos_emb", shape=[max_timestep + 1, n_embd], dtype=jnp.float32, init=jnp.zeros
         )
+        ########################################################################
 
         # Transformer
         self.blocks = []
