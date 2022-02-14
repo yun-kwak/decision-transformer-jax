@@ -25,6 +25,8 @@ Alternatively, you can set up the project using auto-generated `requirements-cpu
 
 ### Training
 
+Run `python -m unittest discover -s dt_jax -p '*_test.py'`
+
 ### Evaluating pre-trained model
 
 ### Testing
