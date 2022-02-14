@@ -1,7 +1,8 @@
 # flake8: noqa
 # type: ignore
-
 import logging
+
+import test_with_cpu
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
@@ -10,11 +11,10 @@ logging.basicConfig(
 )
 
 from absl import app, flags, logging  # type: ignore
-
-from .datasets import StateActionReturnDataset, create_offline_atari_dataset
-from .gpt import GPT, GPTConfig
-from .trainers import AtariTrainer, AtariTrainerConfig
-from .utils import set_global_seed
+from datasets import StateActionReturnDataset, create_offline_atari_dataset
+from gpt import GPT, loss_fn
+from trainers import AtariTrainer, AtariTrainerConfig
+from utils import set_global_seed
 
 # set up logging
 logging.set_verbosity(logging.INFO)
@@ -31,7 +31,6 @@ flags.DEFINE_integer("n_layer", 6, "Number of layers in Transformer")
 flags.DEFINE_integer("trajectories_per_buffer", 10, "Number of trajectories to sample from each of the buffers")
 flags.DEFINE_string("data_dir_prefix", "./dqn_replay/", "Data dir prefix")
 
-
 FLAGS = flags.FLAGS
 
 
@@ -43,16 +42,31 @@ def main(_):
     )
     train_dataset = StateActionReturnDataset(obss, FLAGS.context_length * 3, actions, done_idxs, rtgs, timesteps)
 
-    mconf = GPTConfig(
-        train_dataset.vocab_size,
-        train_dataset.block_size,
-        n_layer=FLAGS.n_layer,
-        n_head=8,
-        n_embd=128,
-        model_type=FLAGS.model_type,
-        max_timestep=max(timesteps),
-    )
-    model = GPT(mconf)
+    mconf = {
+        "vocab_size": train_dataset.vocab_size,
+        "n_embd": 32,
+        "n_layer": 2,
+        "context_len": train_dataset.block_size,
+        "embd_pdrop": 0.1,
+        "transformer_config": {
+            "n_embd": 32,
+            "attn_config": {
+                "n_layer": 2,
+                "n_head": 2,
+                "n_embd": 32,
+                "context_len": train_dataset.block_size,
+                "attn_pdrop": 0.1,
+                "resid_pdrop": 0.1,
+                "name": "attn",
+            },
+            "resid_pdrop": 0.1,
+        },
+        "max_timestep": max(timesteps),
+        "model_type": "reward_conditioned",
+        "name": "gpt",
+    }
+    model = GPT(**mconf)
+    hk_loss_fn = hk.transform(partial(loss_fn, func=model))
 
     tconf = AtariTrainerConfig(
         max_epochs=FLAGS.epochs,
@@ -67,9 +81,9 @@ def main(_):
         game=FLAGS.env_name,
         max_timestep=max(timesteps),
     )
-    trainer = AtariTrainer(model, train_dataset, None, tconf)
-
-    trainer.train()
+    trainer = AtariTrainer(hk_loss_fn, train_dataset, tconf)
+    params = trainer.init_params()
+    params, _ = trainer.train(params)
 
 
 if __name__ == "__main__":
