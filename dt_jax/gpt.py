@@ -83,36 +83,31 @@ class GPT(hk.Module):
             timestep: (1,) int
             is_training (bool)
         """
-        assert states.shape[0] == actions.shape[0] == rtgs.shape[0]
         T = states.shape[0]
-        assert T <= self.context_len
 
         # Embed states
-        states_emb = self.state_encoder(states.reshape((T, 4, 84, 84)))  # (T, n_embd)
+        states_emb = self.state_encoder(states.reshape((-1, 4, 84, 84)))  # (T, n_embd)
         if actions is not None and self.model_type == "reward_conditioned":
             rtgs_emb = self.rtg_encoder(rtgs)  # (T, n_embd)
             actions_emb = self.action_embeddings(actions.squeeze(-1))  # (T, n_embd)
-
             tokens_emb = jnp.zeros(
                 (T * 3 - int(not is_training), self.n_embd)
-            )  # NOTE: internal(decision-transformer-jax)
-            tokens_emb.at[::3, :].set(rtgs_emb)
-            tokens_emb.at[1::3, :].set(states_emb)
-            tokens_emb.at[2::3, :].set(actions_emb[-T + int(not is_training) :, :])
+            )  # NOTE: internal(decision-transformer-jax-1)
+            tokens_emb = tokens_emb.at[::3, :].set(rtgs_emb)
+            tokens_emb = tokens_emb.at[1::3, :].set(states_emb)
+            tokens_emb = tokens_emb.at[2::3, :].set(actions_emb[-T + int(not is_training) :, :])
         elif (
             actions is None and self.model_type == "reward_conditioned"
         ):  # only happens at very first timestep of evaluation
             rtgs_emb = self.rtg_encoder(rtgs)  # (T, n_embd)
-
             tokens_emb = jnp.zeros((T * 2, self.n_embd))
-            tokens_emb.at[::2, :].set(rtgs_emb)
-            tokens_emb.at[1::2, :].set(states_emb)
+            tokens_emb = tokens_emb.at[::2, :].set(rtgs_emb)
+            tokens_emb = tokens_emb.at[1::2, :].set(states_emb)
         elif actions is not None and self.model_type == "naive":
             actions_emb = self.action_embeddings(actions.squeeze(-1))  # (T, n_embd)
-
             tokens_emb = jnp.zeros((T * 2 - int(not is_training), self.n_embd))
-            tokens_emb.at[::2, :].set(states_emb)
-            tokens_emb.at[1::2, :].set(actions_emb[-T + int(not is_training) :, :])
+            tokens_emb = tokens_emb.at[::2, :].set(states_emb)
+            tokens_emb = tokens_emb.at[1::2, :].set(actions_emb[-T + int(not is_training) :, :])
         elif actions is None and self.model_type == "naive":  # only happens at very first timestep of evaluation
             tokens_emb = states_emb
         else:
@@ -145,7 +140,7 @@ class GPT(hk.Module):
         else:
             raise NotImplementedError()
 
-        # (context_len, vocab_size)
+        # (T, vocab_size)
         return logits
 
 

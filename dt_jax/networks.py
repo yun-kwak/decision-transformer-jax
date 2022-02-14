@@ -1,4 +1,5 @@
 import math
+from functools import partial
 from typing import Optional
 
 import haiku as hk
@@ -14,7 +15,8 @@ class Dropout(hk.Module):
 
     def __call__(self, x, is_training):
         pdrop = self.pdrop
-        return hk.dropout(hk.next_rng_key(), pdrop, x) if is_training and pdrop > 0.0 else x
+        drop = partial(hk.dropout, rng=hk.next_rng_key(), rate=pdrop)
+        return hk.cond(is_training, lambda x: drop(x=x), lambda x: x, x)
 
 
 class CausalSelfAttention(hk.Module):
