@@ -40,7 +40,7 @@ def main(_):
     obss, actions, returns, done_idxs, rtgs, timesteps = create_offline_atari_dataset(
         FLAGS.n_buffers, FLAGS.n_steps, FLAGS.env_name, FLAGS.data_dir_prefix, FLAGS.trajectories_per_buffer
     )
-    train_dataset = StateActionReturnDataset(obss, FLAGS.context_length * 3, actions, done_idxs, rtgs, timesteps)
+    train_dataset = StateActionReturnDataset(obss, FLAGS.context_len * 3, actions, done_idxs, rtgs, timesteps)
 
     mconf = {
         "vocab_size": train_dataset.vocab_size,
@@ -74,7 +74,7 @@ def main(_):
         learning_rate=6e-4,
         lr_decay=True,
         warmup_tokens=512 * 20,
-        final_tokens=2 * len(train_dataset) * FLAGS.context_length * 3,
+        final_tokens=2 * len(train_dataset) * FLAGS.context_len * 3,
         num_workers=4,
         seed=FLAGS.seed,
         model_type=FLAGS.model_type,
