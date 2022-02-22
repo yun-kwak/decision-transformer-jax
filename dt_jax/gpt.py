@@ -154,16 +154,3 @@ class GPT(hk.Module):
 
         # (T, vocab_size)
         return logits
-
-
-def cross_entropy(logits, targets):
-    one_hot = jax.nn.one_hot(targets, logits.shape[-1])
-    loss = -jax.nn.log_softmax(logits) * one_hot
-    loss = loss.sum() / one_hot.sum()
-    return loss
-
-
-def loss_fn(func, states, actions, targets, rtgs, timestep, is_training=True):
-    return cross_entropy(
-        jax.vmap(func, in_axes=[0, 0, 0, 0, None])(states, actions, rtgs, timestep, is_training), targets
-    )

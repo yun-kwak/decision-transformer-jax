@@ -1,9 +1,7 @@
 # flake8: noqa
-# type: ignore
 import logging
 
-import test_with_cpu
-
+# set up logging
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s -   %(message)s",
     datefmt="%m/%d/%Y %H:%M:%S",
@@ -12,12 +10,9 @@ logging.basicConfig(
 
 from absl import app, flags, logging  # type: ignore
 from datasets import StateActionReturnDataset, create_offline_atari_dataset
-from gpt import GPT, loss_fn
+from gpt import GPT
 from trainers import AtariTrainer, AtariTrainerConfig
 from utils import set_global_seed
-
-# set up logging
-logging.set_verbosity(logging.INFO)
 
 flags.DEFINE_integer("seed", 17, "Random seed")
 flags.DEFINE_integer("context_len", 30, "Context length")
@@ -44,16 +39,16 @@ def main(_):
 
     mconf = {
         "vocab_size": train_dataset.vocab_size,
-        "n_embd": 32,
-        "n_layer": 2,
+        "n_embd": 128,
+        "n_layer": 6,
         "context_len": train_dataset.block_size,
         "embd_pdrop": 0.1,
         "transformer_config": {
-            "n_embd": 32,
+            "n_embd": 128,
             "attn_config": {
-                "n_layer": 2,
-                "n_head": 2,
-                "n_embd": 32,
+                "n_layer": 6,
+                "n_head": 8,
+                "n_embd": 128,
                 "context_len": train_dataset.block_size,
                 "attn_pdrop": 0.1,
                 "resid_pdrop": 0.1,
@@ -65,8 +60,6 @@ def main(_):
         "model_type": "reward_conditioned",
         "name": "gpt",
     }
-    model = GPT(**mconf)
-    hk_loss_fn = hk.transform(partial(loss_fn, func=model))
 
     tconf = AtariTrainerConfig(
         max_epochs=FLAGS.epochs,
@@ -81,7 +74,12 @@ def main(_):
         game=FLAGS.env_name,
         max_timestep=max(timesteps),
     )
-    trainer = AtariTrainer(hk_loss_fn, train_dataset, tconf)
+
+    def _fwd(states, actions, rtgs, timestep, is_training):
+        model = GPT(**mconf)
+        return model(states=states, actions=actions, rtgs=rtgs, timestep=timestep, is_training=is_training)
+
+    trainer = AtariTrainer(_fwd, train_dataset, tconf)
     params = trainer.init_params()
     params, _ = trainer.train(params)
 
