@@ -46,14 +46,33 @@ class CausalSelfAttention(hk.Module):
         self.resid_pdrop = resid_pdrop
 
         # key, query, value projections for all heads
-        self.key = hk.Linear(n_embd, name="key")
-        self.query = hk.Linear(n_embd, name="query")
-        self.value = hk.Linear(n_embd, name="value")
+        self.key = hk.Linear(
+            n_embd,
+            name="key",
+            w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+            b_init=hk.initializers.Constant(0.0),
+        )
+        self.query = hk.Linear(
+            n_embd,
+            name="query",
+            w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+            b_init=hk.initializers.Constant(0.0),
+        )
+        self.value = hk.Linear(
+            n_embd,
+            name="value",
+            w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+            b_init=hk.initializers.Constant(0.0),
+        )
         # regularization
         self.attn_drop = Dropout(attn_pdrop, name="attn_dropout")
         self.resid_drop = Dropout(resid_pdrop, name="resid_dropout")
         # output projection
-        self.proj = hk.Linear(self.n_embd)
+        self.proj = hk.Linear(
+            self.n_embd,
+            w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+            b_init=hk.initializers.Constant(0.0),
+        )
         # causal mask to ensure that attention is only applied to the left in the input sequence
         self.mask = np.tril(np.ones((self.max_block_size + 1, self.max_block_size + 1)))
 
@@ -90,7 +109,21 @@ class TransformerBlock(hk.Module):
 
         self.attn = CausalSelfAttention(**self.attn_config)
         self.mlp = hk.Sequential(
-            [hk.Linear(4 * self.n_embd, name="linear_1"), jax.nn.gelu, hk.Linear(self.n_embd, name="linear_2")]
+            [
+                hk.Linear(
+                    4 * self.n_embd,
+                    w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+                    b_init=hk.initializers.Constant(0.0),
+                    name="linear_1",
+                ),
+                jax.nn.gelu,
+                hk.Linear(
+                    self.n_embd,
+                    w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+                    b_init=hk.initializers.Constant(0.0),
+                    name="linear_2",
+                ),
+            ]
         )
         self.dropout = Dropout(self.resid_pdrop, name="dropout")
 

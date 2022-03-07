@@ -42,21 +42,29 @@ class GPT(hk.Module):
                 hk.Conv2D(64, kernel_shape=3, stride=1, padding="VALID", data_format="NCHW"),
                 jax.nn.relu,
                 hk.Flatten(),
-                hk.Linear(n_embd),
+                hk.Linear(
+                    n_embd,
+                    w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+                    b_init=hk.initializers.Constant(0.0),
+                ),
                 jax.nn.tanh,
             ]
         )
         # Encode rtg tensor
         self.rtg_encoder = hk.Sequential(
             [
-                hk.Linear(n_embd),
+                hk.Linear(
+                    n_embd,
+                    w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0),
+                    b_init=hk.initializers.Constant(0.0),
+                ),
                 jax.nn.tanh,
             ]
         )
         # Embed ont-hot action tensor
         self.action_embeddings = hk.Sequential(
             [
-                hk.Embed(vocab_size, n_embd),
+                hk.Embed(vocab_size, n_embd, w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0)),
                 jax.nn.tanh,
             ]
         )
@@ -77,14 +85,9 @@ class GPT(hk.Module):
 
         # Decoder head
         self.ln_f = hk.LayerNorm(axis=-1, create_scale=True, create_offset=True, name="layer_norm_f")
-        self.head = hk.Linear(vocab_size, with_bias=False, name="linear_head")
-
-    # TODO: Implement configure_optimizers, _init_weights methods
-    def _configure_optimizers(self):
-        pass
-
-    def _init_weights(self):
-        pass
+        self.head = hk.Linear(
+            vocab_size, with_bias=False, name="linear_head", w_init=hk.initializers.RandomNormal(stddev=0.02, mean=0.0)
+        )
 
     def __call__(self, states, actions, rtgs, timestep, is_training=True):
         """
