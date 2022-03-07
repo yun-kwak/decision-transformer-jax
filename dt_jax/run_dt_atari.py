@@ -8,6 +8,9 @@ logging.basicConfig(
     level=logging.INFO,
 )
 
+import os
+
+import numpy as np
 from absl import app, flags, logging  # type: ignore
 from datasets import StateActionReturnDataset, create_offline_atari_dataset
 from gpt import GPT
@@ -32,9 +35,38 @@ FLAGS = flags.FLAGS
 def main(_):
     set_global_seed(FLAGS.seed, pytorch=True)
 
-    obss, actions, returns, done_idxs, rtgs, timesteps = create_offline_atari_dataset(
-        FLAGS.n_buffers, FLAGS.n_steps, FLAGS.env_name, FLAGS.data_dir_prefix, FLAGS.trajectories_per_buffer
-    )
+    ds_file_name = f"dataset_saved/{FLAGS.env_name}/n_buffer{FLAGS.n_buffers}_n_step{FLAGS.n_steps}_traj_per_buffer{FLAGS.trajectories_per_buffer}_seed{FLAGS.seed}"
+    is_ds_saved = os.path.exists(ds_file_name)
+    if is_ds_saved:
+        logging.info(f"Loading dataset from {ds_file_name}")
+        ds_file = np.load(ds_file_name)
+        obss, actions, returns, done_idxs, rtgs, timesteps = (
+            ds_file["obss"],
+            ds_file["actions"],
+            ds_file["returns"],
+            ds_file["done_idxs"],
+            ds_file["rtgs"],
+            ds_file["timesteps"],
+        )
+        logging.info("Loaded dataset from the folder")
+    else:
+        logging.info("Creating dataset")
+        obss, actions, returns, done_idxs, rtgs, timesteps = create_offline_atari_dataset(
+            FLAGS.n_buffers, FLAGS.n_steps, FLAGS.env_name, FLAGS.data_dir_prefix, FLAGS.trajectories_per_buffer
+        )
+        os.makedirs(os.path.dirname(ds_file_name), exist_ok=True)
+        with open(ds_file_name, "wb") as ds_file:
+            np.savez(
+                ds_file,
+                obss=obss,
+                actions=actions,
+                returns=returns,
+                done_idxs=done_idxs,
+                rtgs=rtgs,
+                timesteps=timesteps,
+            )
+        logging.info(f"Saved dataset to {ds_file_name}")
+
     train_dataset = StateActionReturnDataset(obss, FLAGS.context_len * 3, actions, done_idxs, rtgs, timesteps)
 
     mconf = {

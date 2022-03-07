@@ -4,13 +4,13 @@ from concurrent import futures
 
 import numpy as np
 import tensorflow.compat.v1 as tf
-import torch
 from dopamine.replay_memory import circular_replay_buffer
 from torch.utils.data import Dataset
 
 gfile = tf.gfile
 
 STORE_FILENAME_PREFIX = circular_replay_buffer.STORE_FILENAME_PREFIX
+tf.config.experimental.set_visible_devices([], "GPU")
 
 
 class FixedReplayBuffer:
@@ -131,13 +131,11 @@ class StateActionReturnDataset(Dataset):
                 done_idx = min(int(i), done_idx)
                 break
         idx = done_idx - block_size
-        states = torch.tensor(np.array(self.data[idx:done_idx]), dtype=torch.float32).reshape(
-            block_size, -1
-        )  # (block_size, 4*84*84)
+        states = np.array(self.data[idx:done_idx], dtype=np.float32).reshape(block_size, -1)  # (block_size, 4*84*84)
         states = states / 255.0
-        actions = torch.tensor(self.actions[idx:done_idx], dtype=torch.long).unsqueeze(1)  # (block_size, 1)
-        rtgs = torch.tensor(self.rtgs[idx:done_idx], dtype=torch.float32).unsqueeze(1)
-        timesteps = torch.tensor(self.timesteps[idx : idx + 1], dtype=torch.int64)
+        actions = np.array(self.actions[idx:done_idx], dtype=np.int64)[..., np.newaxis]  # (block_size, 1)
+        rtgs = np.array(self.rtgs[idx:done_idx], dtype=np.float32)[..., np.newaxis]
+        timesteps = np.array(self.timesteps[idx : idx + 1], dtype=np.int64)
 
         return states, actions, rtgs, timesteps
 

@@ -52,6 +52,8 @@ class AtariTrainer:
         batch = next(iter(self.train_dl))
         xs, ys, rs, ts = map(jnp.array, batch)
         params = self.init(subkey, xs[0], ys[0], rs[0], ts[0], True)
+        logging.info("Initializing parameters")
+        logging.info(f"xs shape: {xs.shape}, ys shape: {ys.shape}, rs shape: {rs.shape}, ts shape: {ts.shape}")
         logging.info("number of parameters: %d", sum([leave.size for leave in jax.tree_leaves(params)]))
         return params
 
@@ -79,17 +81,17 @@ class AtariTrainer:
             params = optax.apply_updates(params, updates)
             return loss, params, opt_state
 
-        def run_epoch(params, opt_state):
+        def run_epoch(params, opt_state, it):
+
             loader = DataLoader(
                 self.train_ds,
                 shuffle=True,
-                pin_memory=True,
                 batch_size=config.batch_size,
                 num_workers=config.num_workers,
             )
 
-            losses = []
             pbar = tqdm(loader, total=len(loader))
+            loss_sum = 0
             for batch in pbar:
                 xs, ys, rs, ts = map(jnp.array, batch)
 
@@ -97,13 +99,15 @@ class AtariTrainer:
                 config.rng, subkey = jax.random.split(config.rng)
 
                 loss, params, opt_state = update(params, subkey, xs, ys, ys, rs, ts, opt_state)
-                losses.append(loss)
-                pbar.set_description(f"epoch {epoch+1} train loss {loss:.5f}.")
+                loss_sum += loss
+                it += 1
+                pbar.set_description(f"epoch: {epoch+1} iter: {it}.")
 
-            return params, opt_state, jnp.array(losses).mean()
+            return params, opt_state, loss_sum / len(loader), it
 
+        it = 0
         for epoch in range(config.max_epochs):
-            params, opt_state, loss = run_epoch(params, opt_state)
+            params, opt_state, loss, it = run_epoch(params, opt_state, it)
             print(f"epoch: {epoch}, loss: {loss}")
 
         return params, opt_state
