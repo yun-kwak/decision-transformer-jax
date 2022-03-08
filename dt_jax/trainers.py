@@ -1,4 +1,3 @@
-# flake8: noqa
 import math
 from typing import Mapping
 
@@ -6,7 +5,6 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
-from absl import logging
 from optax import (
     add_decayed_weights,
     chain,
@@ -120,9 +118,6 @@ class AtariTrainer:
         batch = next(iter(self.train_dl))
         xs, ys, rs, ts = map(jnp.array, batch)
         params = self.init(subkey, xs[0], ys[0], rs[0], ts[0], True)
-        logging.info("Initializing parameters")
-        logging.info(f"xs shape: {xs.shape}, ys shape: {ys.shape}, rs shape: {rs.shape}, ts shape: {ts.shape}")
-        logging.info("number of parameters: %d", sum([leave.size for leave in jax.tree_leaves(params)]))
         return params
 
     def train(self, params, opt_state=None):
