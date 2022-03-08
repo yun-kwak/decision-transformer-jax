@@ -5,6 +5,7 @@ import haiku as hk
 import jax
 import jax.numpy as jnp
 import optax
+from absl import flags
 from optax import (
     add_decayed_weights,
     chain,
@@ -15,6 +16,10 @@ from optax import (
 )
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+
+import wandb
+
+FLAGS = flags.FLAGS
 
 
 class AtariTrainerConfig:
@@ -176,6 +181,8 @@ class AtariTrainer:
         it = 0
         for epoch in range(config.max_epochs):
             params, opt_state, loss, it = run_epoch(params, opt_state, it)
+            if FLAGS.wandb:
+                wandb.log({"epoch_train_loss": loss})
             print(f"epoch: {epoch}, loss: {loss}")
 
         return params, opt_state

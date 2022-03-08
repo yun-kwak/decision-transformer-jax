@@ -130,3 +130,8 @@ dmypy.json
 
 .vscode
 *.tmp
+
+logs
+checkpoints
+wandb
+dataset_saved

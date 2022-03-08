@@ -1,5 +1,4 @@
-# flake8: noqa
-import logging
+import logging  # isort:skip
 
 # set up logging
 logging.basicConfig(
@@ -9,6 +8,7 @@ logging.basicConfig(
 )
 
 import os
+import pickle
 
 import numpy as np
 from absl import app, flags, logging  # type: ignore
@@ -16,6 +16,8 @@ from datasets import StateActionReturnDataset, create_offline_atari_dataset
 from gpt import GPT
 from trainers import AtariTrainer, AtariTrainerConfig
 from utils import set_global_seed
+
+import wandb
 
 flags.DEFINE_integer("seed", 17, "Random seed")
 flags.DEFINE_integer("context_len", 30, "Context length")
@@ -29,6 +31,7 @@ flags.DEFINE_integer("n_layer", 6, "Number of layers in Transformer")
 flags.DEFINE_integer("trajectories_per_buffer", 10, "Number of trajectories to sample from each of the buffers")
 flags.DEFINE_string("data_dir_prefix", "./dqn_replay/", "Data dir prefix")
 flags.DEFINE_string("checkpoint_name", "checkpoint", "Checkpoint name")
+flags.DEFINE_bool("wandb", False, "Log to wandb")
 
 FLAGS = flags.FLAGS
 
@@ -36,7 +39,11 @@ FLAGS = flags.FLAGS
 def main(_):
     set_global_seed(FLAGS.seed, pytorch=True)
 
-    ds_file_name = f"dataset_saved/{FLAGS.env_name}/n_buffer{FLAGS.n_buffers}_n_step{FLAGS.n_steps}_traj_per_buffer{FLAGS.trajectories_per_buffer}_seed{FLAGS.seed}"
+    ds_file_name = f"dataset_saved/{FLAGS.env_name}/\
+        n_buffer{FLAGS.n_buffers}_\
+            n_step{FLAGS.n_steps}_\
+                traj_per_buffer{FLAGS.trajectories_per_buffer}_\
+                    seed{FLAGS.seed}"
     is_ds_saved = os.path.exists(ds_file_name)
     if is_ds_saved:
         logging.info(f"Loading dataset from {ds_file_name}")
@@ -115,8 +122,11 @@ def main(_):
     trainer = AtariTrainer(_fwd, train_dataset, tconf)
     params = trainer.init_params()
     params, _ = trainer.train(params)
-    import pickle
 
+    if FLAGS.wandb:
+        wandb.init(project="UDPlanner", config={"flags": FLAGS, "tconf": tconf, "mconf": mconf})
+
+    # Save the checkpoint
     pickle.dump(params, open(f"{FLAGS.checkpoint_name}.pkl", "wb"))
 
 
