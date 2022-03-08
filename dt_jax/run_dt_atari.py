@@ -28,6 +28,7 @@ flags.DEFINE_integer("batch_size", 128, "Batch size")
 flags.DEFINE_integer("n_layer", 6, "Number of layers in Transformer")
 flags.DEFINE_integer("trajectories_per_buffer", 10, "Number of trajectories to sample from each of the buffers")
 flags.DEFINE_string("data_dir_prefix", "./dqn_replay/", "Data dir prefix")
+flags.DEFINE_string("checkpoint_name", "checkpoint", "Checkpoint name")
 
 FLAGS = flags.FLAGS
 
@@ -114,6 +115,9 @@ def main(_):
     trainer = AtariTrainer(_fwd, train_dataset, tconf)
     params = trainer.init_params()
     params, _ = trainer.train(params)
+    import pickle
+
+    pickle.dump(params, open(f"{FLAGS.checkpoint_name}.pkl", "wb"))
 
 
 if __name__ == "__main__":

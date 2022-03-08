@@ -6,6 +6,8 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 
 ### Atari
 
+![Atari result 1](imgs/atari_result_1.png)
+
 ### Gym
 
 ## Usage
@@ -24,6 +26,8 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 Alternatively, you can set up the project using auto-generated `requirements-cpu.txt` or `requirement-gpu.txt`: e.g. `pip install -r requirements-gpu.txt` (tested in python=3.8, cudatoolkit=11.1, cudnn=8.2)
 
 ### Training
+
+Run `cd dt_jax && bash run.sh` to train the model.
 
 ### Evaluating pre-trained model
 
