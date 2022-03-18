@@ -50,19 +50,19 @@ def top_k_logits(logits: jnp.array, k: int) -> jnp.array:
 
 def sample(
     params: hk.Params,
+    subkey: Optional[jnp.array],
     model: Callable,
-    x: jnp.array,
+    states: jnp.array,
     block_size: int,
     temperature: float = 1.0,
     sample: bool = False,
     top_k: Optional[int] = None,
     actions: Optional[jnp.array] = None,
     rtgs: Optional[jnp.array] = None,
-    timesteps: Optional[jnp.array] = None,
-    rng: Optional[jnp.array] = None,
+    timestep: Optional[jnp.array] = None,
 ) -> jnp.array:
     """
-    Take a conditioning sequence of indices in x (of shape (t,)) and predict the next token in
+    Take a conditioning sequence of indices in states (of shape (t,)) and predict the next token in
     the sequence
 
     Returns:
@@ -70,25 +70,25 @@ def sample(
     """
     # Crop context if needed
     context_length = block_size // 3
-    x_cond = x if x.size <= context_length else x[-context_length:]
+    x_cond = states if states.shape[0] <= context_length else states[-context_length:]
     if actions is not None:
-        actions = actions if actions.size <= context_length else actions[-context_length:]
+        actions = actions if actions.shape[0] <= context_length else actions[-context_length:]
     if rtgs is None:
         raise ValueError("rtgs must be provided")
-    rtgs = rtgs if rtgs.size <= context_length else rtgs[-context_length:]
+    rtgs = rtgs if rtgs.shape[0] <= context_length else rtgs[-context_length:]
 
-    logits = model(params, x_cond, actions=actions, targets=None, rtgs=rtgs, timesteps=timesteps, is_training=False)
+    logits = model(params, subkey, x_cond, actions=actions, rtgs=rtgs, timestep=timestep, is_training=False)
     # Pluck the logits at the final step and scale by temperature
     logits = logits[-1, :] / temperature  # logits' shape is (action_size,)
 
     # Sample from the distribution or take the most likely
     if sample:
-        assert rng is not None
+        assert subkey is not None
         # Optionally crop probabilities to only the top k options
         if top_k is not None:
             logits = top_k_logits(logits, top_k)
         probs = jax.nn.log_softmax(logits, axis=-1)
-        ix = jax.random.categorical(rng, probs, shape=(1,))
+        ix = jax.random.categorical(subkey, probs, shape=(1,))
     else:
         # Take the most likely
         _, ix = jax.lax.top_k(logits, k=1)

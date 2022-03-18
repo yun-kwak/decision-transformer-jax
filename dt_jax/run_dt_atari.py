@@ -1,4 +1,4 @@
-import logging  # isort:skip
+import logging
 
 # set up logging
 logging.basicConfig(
@@ -8,7 +8,6 @@ logging.basicConfig(
 )
 
 import os
-import pickle
 
 import numpy as np
 from absl import app, flags, logging  # type: ignore
@@ -30,7 +29,7 @@ flags.DEFINE_integer("batch_size", 128, "Batch size")
 flags.DEFINE_integer("n_layer", 6, "Number of layers in Transformer")
 flags.DEFINE_integer("trajectories_per_buffer", 10, "Number of trajectories to sample from each of the buffers")
 flags.DEFINE_string("data_dir_prefix", "./dqn_replay/", "Data dir prefix")
-flags.DEFINE_string("checkpoint_name", "checkpoint", "Checkpoint name")
+flags.DEFINE_string("checkpoint_name", "no_checkpoint", help="Checkpoint name")
 flags.DEFINE_bool("wandb", False, "Log to wandb")
 
 FLAGS = flags.FLAGS
@@ -39,11 +38,10 @@ FLAGS = flags.FLAGS
 def main(_):
     set_global_seed(FLAGS.seed, pytorch=True)
 
-    ds_file_name = f"dataset_saved/{FLAGS.env_name}/\
-        n_buffer{FLAGS.n_buffers}_\
-            n_step{FLAGS.n_steps}_\
-                traj_per_buffer{FLAGS.trajectories_per_buffer}_\
-                    seed{FLAGS.seed}"
+    ds_file_name = (
+        f"dataset_saved/{FLAGS.env_name}/n_buffer{FLAGS.n_buffers}"
+        f"_n_step{FLAGS.n_steps}_traj_per_buffer{FLAGS.trajectories_per_buffer}_seed{FLAGS.seed}"
+    )
     is_ds_saved = os.path.exists(ds_file_name)
     if is_ds_saved:
         logging.info(f"Loading dataset from {ds_file_name}")
@@ -115,6 +113,9 @@ def main(_):
         max_timestep=max(timesteps),
     )
 
+    if FLAGS.wandb:
+        wandb.init(project="UDPlanner", config={"flags": FLAGS, "tconf": tconf, "mconf": mconf})
+
     def _fwd(states, actions, rtgs, timestep, is_training):
         model = GPT(**mconf)
         return model(states=states, actions=actions, rtgs=rtgs, timestep=timestep, is_training=is_training)
@@ -122,12 +123,6 @@ def main(_):
     trainer = AtariTrainer(_fwd, train_dataset, tconf)
     params = trainer.init_params()
     params, _ = trainer.train(params)
-
-    if FLAGS.wandb:
-        wandb.init(project="UDPlanner", config={"flags": FLAGS, "tconf": tconf, "mconf": mconf})
-
-    # Save the checkpoint
-    pickle.dump(params, open(f"{FLAGS.checkpoint_name}.pkl", "wb"))
 
 
 if __name__ == "__main__":

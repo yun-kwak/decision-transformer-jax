@@ -4,8 +4,10 @@ from typing import Mapping
 import haiku as hk
 import jax
 import jax.numpy as jnp
+import numpy as np
 import optax
 from absl import flags
+from envs import AtariEnv, AtariEnvConfig
 from optax import (
     add_decayed_weights,
     chain,
@@ -16,6 +18,7 @@ from optax import (
 )
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from utils import sample
 
 import wandb
 
@@ -181,8 +184,98 @@ class AtariTrainer:
         it = 0
         for epoch in range(config.max_epochs):
             params, opt_state, loss, it = run_epoch(params, opt_state, it)
-            if FLAGS.wandb:
-                wandb.log({"epoch_train_loss": loss})
             print(f"epoch: {epoch}, loss: {loss}")
 
+            if self.config.model_type == "naive":
+                eval_return = self.get_returns(0, params)
+            elif self.config.model_type == "reward_conditioned":
+                if self.config.game == "Breakout":
+                    eval_return = self.get_returns(90, params)
+                elif self.config.game == "Seaquest":
+                    eval_return = self.get_returns(1150, params)
+                elif self.config.game == "Qbert":
+                    eval_return = self.get_returns(14000, params)
+                elif self.config.game == "Pong":
+                    eval_return = self.get_returns(20, params)
+                else:
+                    raise NotImplementedError()
+            else:
+                raise NotImplementedError()
+            print(f"eval return: {eval_return}")
+            if FLAGS.wandb:
+                wandb.log({"epoch_train_loss": loss, "epoch_eval_return": eval_return}, step=epoch)
+
+            if FLAGS.checkpoint_name != "no_checkpoint":
+                # Save the checkpoint
+                import pickle
+
+                pickle.dump(params, open(f"{FLAGS.checkpoint_name}_epoch_{epoch}.pkl", "wb"))
+
         return params, opt_state
+
+    def get_returns(self, ret, params):
+        args = AtariEnvConfig(self.config.seed, self.config.game.lower())
+        env = AtariEnv(args)
+        env.eval()
+
+        T_rewards = []
+        done = True
+        for _ in range(10):
+            state = env.reset()
+            state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)
+            rtgs = [ret]
+            # first state is from env, first rtg is target return, and first timestep is 0
+
+            self.config.rng, subkey = jax.random.split(self.config.rng)
+            sampled_action = sample(
+                params,
+                subkey,
+                self.apply,
+                state,
+                block_size=self.train_ds.block_size,
+                temperature=1.0,
+                sample=True,
+                actions=None,
+                rtgs=jnp.asarray(rtgs, dtype=jnp.int32)[..., jnp.newaxis],
+                timestep=jnp.zeros((1), dtype=jnp.int32),
+            )
+            j = 0
+            all_states = state
+            actions = []
+            while True:
+                if done:
+                    state, reward_sum, done = env.reset(), 0, False
+                action = np.array(sampled_action)[-1]
+                state, reward, done = env.step(action)
+                reward_sum += reward
+                j += 1
+
+                if done:
+                    T_rewards.append(reward_sum)
+                    break
+
+                state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)
+
+                all_states = jnp.concatenate([all_states, state], axis=0)
+
+                rtgs += [rtgs[-1] - reward]
+                actions += [sampled_action]
+                # all_states has all previous states and rtgs has all previous rtgs
+                # (will be cut to block_size in utils.sample)
+                # timestep is just current timestep
+                self.config.rng, subkey = jax.random.split(self.config.rng)
+                sampled_action = sample(
+                    params,
+                    subkey,
+                    self.apply,
+                    all_states,
+                    block_size=self.train_ds.block_size,
+                    temperature=1.0,
+                    sample=True,
+                    actions=jnp.asarray(actions, dtype=jnp.int32),
+                    rtgs=jnp.asarray(rtgs, dtype=jnp.int32).reshape(-1, 1),
+                    timestep=(min(j, self.config.max_timestep) * jnp.ones((1), dtype=jnp.int32)),
+                )
+        # env.close()
+        eval_return = sum(T_rewards) / 10.0
+        return eval_return
