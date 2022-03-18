@@ -2,7 +2,7 @@
 .ONESHELL:
 
 # Specify conda environment name
-CONDA_ENV=decision-transformer-jax
+CONDA_ENV=dt-jax
 
 # Default device
 DEVICE=gpu
