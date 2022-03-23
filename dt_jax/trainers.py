@@ -184,7 +184,7 @@ class AtariTrainer:
         it = 0
         for epoch in range(config.max_epochs):
             params, opt_state, loss, it = run_epoch(params, opt_state, it)
-            print(f"epoch: {epoch}, loss: {loss}")
+            print(f"epoch: {epoch + 1}, loss: {loss}")
 
             if self.config.model_type == "naive":
                 eval_mean_return, eval_std_return = self.get_returns(0, params)
@@ -209,14 +209,14 @@ class AtariTrainer:
                         "epoch_eval_mean_return": eval_mean_return,
                         "epoch_eval_std_return": eval_std_return,
                     },
-                    step=epoch,
+                    step=epoch + 1,
                 )
 
             if FLAGS.checkpoint_name != "no_checkpoint":
                 # Save the checkpoint
                 import pickle
 
-                pickle.dump(params, open(f"{FLAGS.checkpoint_name}_epoch_{epoch}.pkl", "wb"))
+                pickle.dump(params, open(f"{FLAGS.checkpoint_name}_epoch_{epoch+1}.pkl", "wb"))
 
         return params, opt_state
 
