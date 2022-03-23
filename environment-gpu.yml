@@ -1,4 +1,4 @@
-name: decision-transformer-jax
+name: dt-jax
 channels:
   - defaults
 dependencies:
