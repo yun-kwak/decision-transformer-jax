@@ -70,9 +70,9 @@ class AtariEnv:
         for t in range(4):
             reward += self.ale.act(self.actions.get(action))
             if t == 2:
-                frame_buffer.at[0].set(self._get_state())
+                frame_buffer = frame_buffer.at[0].set(self._get_state())
             elif t == 3:
-                frame_buffer.at[1].set(self._get_state())
+                frame_buffer = frame_buffer.at[1].set(self._get_state())
             done = self.ale.game_over()
             if done:
                 break

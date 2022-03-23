@@ -187,23 +187,30 @@ class AtariTrainer:
             print(f"epoch: {epoch}, loss: {loss}")
 
             if self.config.model_type == "naive":
-                eval_return = self.get_returns(0, params)
+                eval_mean_return, eval_std_return = self.get_returns(0, params)
             elif self.config.model_type == "reward_conditioned":
                 if self.config.game == "Breakout":
-                    eval_return = self.get_returns(90, params)
+                    eval_mean_return, eval_std_return = self.get_returns(90, params)
                 elif self.config.game == "Seaquest":
-                    eval_return = self.get_returns(1150, params)
+                    eval_mean_return, eval_std_return = self.get_returns(1150, params)
                 elif self.config.game == "Qbert":
-                    eval_return = self.get_returns(14000, params)
+                    eval_mean_return, eval_std_return = self.get_returns(14000, params)
                 elif self.config.game == "Pong":
-                    eval_return = self.get_returns(20, params)
+                    eval_mean_return, eval_std_return = self.get_returns(20, params)
                 else:
                     raise NotImplementedError()
             else:
                 raise NotImplementedError()
-            print(f"eval return: {eval_return}")
+            print(f"eval return: {eval_mean_return}, std: {eval_std_return}")
             if FLAGS.wandb:
-                wandb.log({"epoch_train_loss": loss, "epoch_eval_return": eval_return}, step=epoch)
+                wandb.log(
+                    {
+                        "epoch_train_loss": loss,
+                        "epoch_eval_mean_return": eval_mean_return,
+                        "epoch_eval_std_return": eval_std_return,
+                    },
+                    step=epoch,
+                )
 
             if FLAGS.checkpoint_name != "no_checkpoint":
                 # Save the checkpoint
@@ -217,12 +224,12 @@ class AtariTrainer:
         args = AtariEnvConfig(self.config.seed, self.config.game.lower())
         env = AtariEnv(args)
         env.eval()
-
         T_rewards = []
         done = True
-        for _ in range(10):
-            state = env.reset()
-            state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)
+        pbar = tqdm(range(10))
+        for it in pbar:
+            state = env.reset()  # (4, 84, 84)
+            state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)  # (1, 4 * 84 * 84)
             rtgs = [ret]
             # first state is from env, first rtg is target return, and first timestep is 0
 
@@ -252,9 +259,10 @@ class AtariTrainer:
 
                 if done:
                     T_rewards.append(reward_sum)
+                    pbar.set_description(f"eval iter: {it}. mean: {np.mean(T_rewards)}, std: {np.std(T_rewards)}")
                     break
 
-                state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)
+                state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)  # (1, 4 * 84 * 84)
 
                 all_states = jnp.concatenate([all_states, state], axis=0)
 
@@ -276,6 +284,6 @@ class AtariTrainer:
                     rtgs=jnp.asarray(rtgs, dtype=jnp.int32).reshape(-1, 1),
                     timestep=(min(j, self.config.max_timestep) * jnp.ones((1), dtype=jnp.int32)),
                 )
+
         # env.close()
-        eval_return = sum(T_rewards) / 10.0
-        return eval_return
+        return np.mean(T_rewards), np.std(T_rewards)

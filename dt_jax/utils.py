@@ -62,9 +62,9 @@ def sample(
     timestep: Optional[jnp.array] = None,
 ) -> jnp.array:
     """
-    Take a conditioning sequence of indices in states (of shape (t,)) and predict the next token in
-    the sequence
-
+    Take a conditioning sequence of
+    states (T, state_dim)), actions: (T, 1), rtgs: (T, 1), and timestep: (1,)
+    and predict the next action token.
     Returns:
         jnp.array: A tensor of shape (1,).
     """

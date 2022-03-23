@@ -56,7 +56,7 @@ def main(_):
         )
         logging.info("Loaded dataset from the folder")
     else:
-        logging.info("Creating dataset")
+        logging.info(f"Creating dataset {ds_file_name}")
         obss, actions, returns, done_idxs, rtgs, timesteps = create_offline_atari_dataset(
             FLAGS.n_buffers, FLAGS.n_steps, FLAGS.env_name, FLAGS.data_dir_prefix, FLAGS.trajectories_per_buffer
         )

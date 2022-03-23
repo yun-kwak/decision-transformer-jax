@@ -130,6 +130,7 @@ class GPT(hk.Module):
 
         # Add positional embeddings
         # NOTE: internal(decision-transformer-jax-2)
+        # TODO(yun-kwak): Resolve deprecation warning
         global_pos_emb = self.global_pos_emb[timestep]  # (1, n_embd)
         local_pos_emb = self.pos_emb[
             : tokens_emb.shape[0],
