@@ -8,15 +8,15 @@ logging.basicConfig(
 )
 
 import os
+from dataclasses import asdict
 
 import numpy as np
+import wandb
 from absl import app, flags, logging  # type: ignore
 from datasets import StateActionReturnDataset, create_offline_atari_dataset
 from gpt import GPT
 from trainers import AtariTrainer, AtariTrainerConfig
 from utils import set_global_seed
-
-import wandb
 
 flags.DEFINE_integer("seed", 17, "Random seed")
 flags.DEFINE_integer("context_len", 30, "Context length")
@@ -31,6 +31,8 @@ flags.DEFINE_integer("trajectories_per_buffer", 10, "Number of trajectories to s
 flags.DEFINE_string("data_dir_prefix", "./dqn_replay/", "Data dir prefix")
 flags.DEFINE_string("checkpoint_name", "no_checkpoint", help="Checkpoint name")
 flags.DEFINE_bool("wandb", False, "Log to wandb")
+# TODO(yun-kwak): Add an option for specifying the path of saved dataset
+# TODO(yun-kwak): Make path handling more elegant
 
 FLAGS = flags.FLAGS
 
@@ -114,7 +116,8 @@ def main(_):
     )
 
     if FLAGS.wandb:
-        wandb.init(project="UDPlanner", config={"flags": FLAGS, "tconf": tconf, "mconf": mconf})
+        # TODO(yun-kwak): Make types of config consistent
+        wandb.init(project="UDPlanner", config={"flags": FLAGS, "tconf": asdict(tconf), "mconf": mconf})
 
     def _fwd(states, actions, rtgs, timestep, is_training):
         model = GPT(**mconf)

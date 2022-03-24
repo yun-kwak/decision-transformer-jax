@@ -1,4 +1,5 @@
 import math
+from dataclasses import dataclass
 from typing import Mapping
 
 import haiku as hk
@@ -6,6 +7,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
+import wandb
 from absl import flags
 from envs import AtariEnv, AtariEnvConfig
 from optax import (
@@ -20,11 +22,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils import sample
 
-import wandb
-
 FLAGS = flags.FLAGS
 
 
+@dataclass
 class AtariTrainerConfig:
     # optimization parameters
     max_epochs = 10
@@ -41,10 +42,6 @@ class AtariTrainerConfig:
     ckpt_path = None
     num_workers = 0  # for DataLoader
     rng = jax.random.PRNGKey(42)
-
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
 
 
 def cross_entropy(logits, targets):
