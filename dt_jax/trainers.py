@@ -212,8 +212,8 @@ class AtariTrainer:
                         "epoch_train_loss": loss,
                         "epoch_eval_mean_return": eval_mean_return,
                         "epoch_eval_std_return": eval_std_return,
+                        "epoch": epoch + 1,
                     },
-                    step=epoch + 1,
                 )
 
             if FLAGS.checkpoint_name != "no_checkpoint":
