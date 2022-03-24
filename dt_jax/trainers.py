@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from functools import partial
 from typing import Mapping, Tuple
 
 import haiku as hk
@@ -224,12 +225,16 @@ class AtariTrainer:
         return params, opt_state
 
     def get_returns(self, ret, params):
+        # TODO(yun-kwak): Optimize evaluation phase(jit, parallel, etc)
         args = AtariEnvConfig(self.config.seed, self.config.game.lower())
         env = AtariEnv(args)
         env.eval()
         T_rewards = []
         done = True
         pbar = tqdm(range(10))
+        jit_sample = jax.jit(
+            partial(sample, model=self.apply), static_argnames=["block_size", "temperature", "sample"]
+        )
         for it in pbar:
             state = env.reset()  # (4, 84, 84)
             state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)  # (1, 4 * 84 * 84)
@@ -237,11 +242,10 @@ class AtariTrainer:
             # first state is from env, first rtg is target return, and first timestep is 0
 
             self.config.rng, subkey = jax.random.split(self.config.rng)
-            sampled_action = sample(
+            sampled_action = jit_sample(
                 params,
                 subkey,
-                self.apply,
-                state,
+                states=state,
                 block_size=self.train_ds.block_size,
                 temperature=1.0,
                 sample=True,
@@ -275,11 +279,10 @@ class AtariTrainer:
                 # (will be cut to block_size in utils.sample)
                 # timestep is just current timestep
                 self.config.rng, subkey = jax.random.split(self.config.rng)
-                sampled_action = sample(
+                sampled_action = jit_sample(
                     params,
                     subkey,
-                    self.apply,
-                    all_states,
+                    states=all_states,
                     block_size=self.train_ds.block_size,
                     temperature=1.0,
                     sample=True,
