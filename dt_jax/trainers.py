@@ -1,13 +1,12 @@
 import math
 from dataclasses import dataclass
-from typing import Mapping
+from typing import Mapping, Tuple
 
 import haiku as hk
 import jax
 import jax.numpy as jnp
 import numpy as np
 import optax
-import wandb
 from absl import flags
 from envs import AtariEnv, AtariEnvConfig
 from optax import (
@@ -22,26 +21,33 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from utils import sample
 
+import wandb
+
 FLAGS = flags.FLAGS
 
 
 @dataclass
 class AtariTrainerConfig:
     # optimization parameters
-    max_epochs = 10
-    batch_size = 64
-    learning_rate = 3e-4
-    betas = (0.9, 0.95)
-    grad_norm_clip = 1.0
-    weight_decay = 0.1  # only applied on matmul weights
+    max_timestep: int
+    max_epochs: int = 10
+    batch_size: int = 64
+    learning_rate: float = 3e-4
+    betas: Tuple[float, float] = (0.9, 0.95)
+    grad_norm_clip: float = 1.0
+    weight_decay: float = 0.1  # only applied on matmul weights
     # learning rate decay params: linear warmup followed by cosine decay to 10% of original
-    lr_decay = False
-    warmup_tokens = 375e6  # these two numbers come from the GPT-3 paper, but may not be good defaults elsewhere
-    final_tokens = 260e9  # (at what point we reach 10% of original LR)
-    # checkpoint settings
-    ckpt_path = None
-    num_workers = 0  # for DataLoader
-    rng = jax.random.PRNGKey(42)
+    lr_decay: bool = False
+    # these two numbers come from the GPT-3 paper, but may not be good defaults elsewhere
+    warmup_tokens: int = int(375e6)
+    final_tokens: int = int(260e9)  # (at what point we reach 10% of original LR)
+    num_workers: int = 0  # for DataLoader
+    seed: int = 42
+    model_type: str = "reward_conditioned"
+    game: str = "Breakout"
+
+    def __post_init__(self):
+        self.rng = jax.random.PRNGKey(self.seed)
 
 
 def cross_entropy(logits, targets):

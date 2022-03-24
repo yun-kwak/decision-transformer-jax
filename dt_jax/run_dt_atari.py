@@ -11,12 +11,13 @@ import os
 from dataclasses import asdict
 
 import numpy as np
-import wandb
 from absl import app, flags, logging  # type: ignore
 from datasets import StateActionReturnDataset, create_offline_atari_dataset
 from gpt import GPT
 from trainers import AtariTrainer, AtariTrainerConfig
 from utils import set_global_seed
+
+import wandb
 
 flags.DEFINE_integer("seed", 17, "Random seed")
 flags.DEFINE_integer("context_len", 30, "Context length")
@@ -117,7 +118,8 @@ def main(_):
 
     if FLAGS.wandb:
         # TODO(yun-kwak): Make types of config consistent
-        wandb.init(project="UDPlanner", config={"flags": FLAGS, "tconf": asdict(tconf), "mconf": mconf})
+        wandb.init(project="UDPlanner", config={"tconf": asdict(tconf), "mconf": mconf})
+        wandb.config.update(FLAGS)
 
     def _fwd(states, actions, rtgs, timestep, is_training):
         model = GPT(**mconf)
