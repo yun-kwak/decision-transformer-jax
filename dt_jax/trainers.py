@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpy as np
 import optax
 from absl import flags
+from configs import AtariDefaultOptimalReturn
 from envs import AtariEnv, AtariEnvConfig
 from optax import (
     add_decayed_weights,
@@ -20,7 +21,7 @@ from optax import (
 )
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from utils import sample
+from utils import flatten_params, sample
 
 import wandb
 
@@ -130,6 +131,9 @@ class AtariTrainer:
         batch = next(iter(self.train_dl))
         xs, ys, rs, ts = map(jnp.array, batch)
         params = self.init(subkey, xs[0], ys[0], rs[0], ts[0], True)
+        num_params = hk.data_structures.tree_size(params)
+        byte_size = hk.data_structures.tree_bytes(params)
+        print(f"{num_params} params, size: {byte_size / 1e6:.2f}MB")
         return params
 
     def train(self, params, opt_state=None):
@@ -178,9 +182,49 @@ class AtariTrainer:
                 # different rng on each device
                 config.rng, subkey = jax.random.split(config.rng)
 
-                loss, params, opt_state = update(params, subkey, xs, ys, ys, rs, ts, opt_state)
+                loss, params, opt_state, grads = update(params, subkey, xs, ys, ys, rs, ts, opt_state)
                 loss_sum += loss
                 it += 1
+
+                # Evaluate the model every 100 steps
+                if it % 100 == 0:
+                    # TODO(yun-kwak): Remove redundant code
+                    if self.config.model_type == "naive":
+                        eval_mean_return, eval_std_return = self.get_returns(0, params, n_epi=1)
+                    elif self.config.model_type == "reward_conditioned":
+                        eval_mean_return, eval_std_return = self.get_returns(
+                            AtariDefaultOptimalReturn[self.config.game], params, n_epi=1
+                        )
+                    else:
+                        raise NotImplementedError()
+
+                    print(
+                        f"Iteration {it}: eval mean return: {eval_mean_return:.2f}, "
+                        + f"eval std return: {eval_std_return:.2f}"
+                    )
+                    if FLAGS.wandb:
+                        wandb.log(
+                            {"eval_mean_return": eval_mean_return, "eval_std_return": eval_std_return},
+                            commit=False,
+                        )
+
+                    if FLAGS.checkpoint_path != "no_checkpoint":
+                        # Save the checkpoint
+                        assert FLAGS.wandb, "FLAGS.wandb must be True to save checkpoints"
+                        import pickle
+
+                        pickle.dump(params, open(f"{FLAGS.checkpoint_path}_{wandb.run.name}_iter_{it}.pkl", "wb"))
+                if FLAGS.wandb:
+                    if FLAGS.wandb_logging_grads:
+                        for name, value in flatten_params(grads):
+                            wandb.log({f"grad/{name}": wandb.Histogram(value)}, commit=False)
+                    wandb.log(
+                        {
+                            "batch_loss": loss,
+                            "samples": it * config.batch_size,
+                            "gd_steps": it,
+                        },
+                    )
                 pbar.set_description(f"epoch: {epoch+1} iter: {it}.")
 
             return params, opt_state, loss_sum / len(loader), it
@@ -193,16 +237,9 @@ class AtariTrainer:
             if self.config.model_type == "naive":
                 eval_mean_return, eval_std_return = self.get_returns(0, params)
             elif self.config.model_type == "reward_conditioned":
-                if self.config.game == "Breakout":
-                    eval_mean_return, eval_std_return = self.get_returns(90, params)
-                elif self.config.game == "Seaquest":
-                    eval_mean_return, eval_std_return = self.get_returns(1150, params)
-                elif self.config.game == "Qbert":
-                    eval_mean_return, eval_std_return = self.get_returns(14000, params)
-                elif self.config.game == "Pong":
-                    eval_mean_return, eval_std_return = self.get_returns(20, params)
-                else:
-                    raise NotImplementedError()
+                eval_mean_return, eval_std_return = self.get_returns(
+                    AtariDefaultOptimalReturn[self.config.game], params
+                )
             else:
                 raise NotImplementedError()
             print(f"eval return: {eval_mean_return}, std: {eval_std_return}")
@@ -214,54 +251,68 @@ class AtariTrainer:
                         "epoch_eval_std_return": eval_std_return,
                         "epoch": epoch + 1,
                     },
+                    commit=False,
                 )
 
-            if FLAGS.checkpoint_name != "no_checkpoint":
+            if FLAGS.checkpoint_path != "no_checkpoint":
                 # Save the checkpoint
+                assert FLAGS.wandb, "FLAGS.wandb must be True to save checkpoints"
                 import pickle
 
-                pickle.dump(params, open(f"{FLAGS.checkpoint_name}_epoch_{epoch+1}.pkl", "wb"))
+                pickle.dump(params, open(f"{FLAGS.checkpoint_path}_{wandb.run.name}_epoch_{epoch + 1}.pkl", "wb"))
 
         return params, opt_state
 
-    def get_returns(self, ret, params):
+    def get_returns(self, ret, params, n_epi=10):
         # TODO(yun-kwak): Optimize evaluation phase(jit, parallel, etc)
         args = AtariEnvConfig(self.config.seed, self.config.game.lower())
         env = AtariEnv(args)
         env.eval()
         T_rewards = []
         done = True
-        pbar = tqdm(range(10))
+        pbar = tqdm(range(n_epi))
         jit_sample = jax.jit(
             partial(sample, model=self.apply), static_argnames=["block_size", "temperature", "sample"]
         )
+
+        def build_traj_block(states, actions, rtgs, timestep):
+            context_len = self.train_ds.block_size // 3
+            s = jnp.asarray(states[-context_len:], dtype=jnp.float32)
+            a = jnp.asarray(actions[-context_len:], dtype=jnp.int32)
+            r = jnp.asarray(rtgs[-context_len:], dtype=jnp.int32)[..., jnp.newaxis]  # rtgs
+            t = ((min(timestep, self.config.max_timestep) * jnp.ones((1), dtype=jnp.int32)),)
+            return s, a, r, t
+
         for it in pbar:
-            state = env.reset()  # (4, 84, 84)
-            state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)  # (1, 4 * 84 * 84)
-            rtgs = [ret]
             # first state is from env, first rtg is target return, and first timestep is 0
+            states = []
+            actions = []
+            rtgs = [ret]
+
+            state = env.reset()  # (4, 84, 84)
+            states.append(state)
 
             self.config.rng, subkey = jax.random.split(self.config.rng)
+            s, _, r, t = build_traj_block(states, actions, rtgs, 1)
             sampled_action = jit_sample(
                 params,
                 subkey,
-                states=state,
+                states=s,
                 block_size=self.train_ds.block_size,
                 temperature=1.0,
                 sample=True,
                 actions=None,
-                rtgs=jnp.asarray(rtgs, dtype=jnp.int32)[..., jnp.newaxis],
-                timestep=jnp.zeros((1), dtype=jnp.int32),
+                rtgs=r,
+                timestep=t,
             )
             j = 0
-            all_states = state
-            actions = []
             while True:
                 if done:
                     state, reward_sum, done = env.reset(), 0, False
                 action = np.array(sampled_action)[-1]
                 state, reward, done = env.step(action)
                 reward_sum += reward
+                pbar.set_description(f"eval iter: {it}. reward_sum: {reward_sum}, step: {j}")
                 j += 1
 
                 if done:
@@ -269,26 +320,22 @@ class AtariTrainer:
                     pbar.set_description(f"eval iter: {it}. mean: {np.mean(T_rewards)}, std: {np.std(T_rewards)}")
                     break
 
-                state = jnp.asarray(state, dtype=jnp.float32).reshape(1, -1)  # (1, 4 * 84 * 84)
+                states.append(state)
+                rtgs.append(rtgs[-1] - reward)
+                actions.append(sampled_action)
 
-                all_states = jnp.concatenate([all_states, state], axis=0)
-
-                rtgs += [rtgs[-1] - reward]
-                actions += [sampled_action]
-                # all_states has all previous states and rtgs has all previous rtgs
-                # (will be cut to block_size in utils.sample)
-                # timestep is just current timestep
                 self.config.rng, subkey = jax.random.split(self.config.rng)
+                s, a, r, t = build_traj_block(states, actions, rtgs, j)
                 sampled_action = jit_sample(
                     params,
                     subkey,
-                    states=all_states,
+                    states=s,
                     block_size=self.train_ds.block_size,
                     temperature=1.0,
                     sample=True,
-                    actions=jnp.asarray(actions, dtype=jnp.int32),
-                    rtgs=jnp.asarray(rtgs, dtype=jnp.int32).reshape(-1, 1),
-                    timestep=(min(j, self.config.max_timestep) * jnp.ones((1), dtype=jnp.int32)),
+                    actions=a,
+                    rtgs=r,
+                    timestep=t,
                 )
 
         # env.close()

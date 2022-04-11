@@ -1,5 +1,7 @@
 # flake8: noqa
 import collections
+import logging
+import os
 from concurrent import futures
 
 import numpy as np
@@ -11,6 +13,41 @@ gfile = tf.gfile
 
 STORE_FILENAME_PREFIX = circular_replay_buffer.STORE_FILENAME_PREFIX
 tf.config.experimental.set_visible_devices([], "GPU")
+
+
+def get_dataset(ds_file_path, n_buffers, n_steps, env_name, data_dir_prefix, trajectories_per_buffer, context_len):
+    is_ds_saved = os.path.exists(ds_file_path)
+    if is_ds_saved:
+        logging.info(f"Loading dataset from {ds_file_path}")
+        ds_file = np.load(ds_file_path)
+        obss, actions, returns, done_idxs, rtgs, timesteps = (
+            ds_file["obss"],
+            ds_file["actions"],
+            ds_file["returns"],
+            ds_file["done_idxs"],
+            ds_file["rtgs"],
+            ds_file["timesteps"],
+        )
+        logging.info("Loaded dataset from the folder")
+    else:
+        logging.info(f"Creating dataset {ds_file_path}")
+        obss, actions, returns, done_idxs, rtgs, timesteps = create_offline_atari_dataset(
+            n_buffers, n_steps, env_name, data_dir_prefix, trajectories_per_buffer
+        )
+        os.makedirs(os.path.dirname(ds_file_path), exist_ok=True)
+        with open(ds_file_path, "wb") as ds_file:
+            np.savez(
+                ds_file,
+                obss=obss,
+                actions=actions,
+                returns=returns,
+                done_idxs=done_idxs,
+                rtgs=rtgs,
+                timesteps=timesteps,
+            )
+        logging.info(f"Saved dataset to {ds_file_path}")
+
+    return StateActionReturnDataset(obss, context_len * 3, actions, done_idxs, rtgs, timesteps)
 
 
 class FixedReplayBuffer:

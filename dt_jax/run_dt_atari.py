@@ -10,10 +10,10 @@ logging.basicConfig(
 import os
 from dataclasses import asdict
 
-import numpy as np
 from absl import app, flags, logging  # type: ignore
-from datasets import StateActionReturnDataset, create_offline_atari_dataset
+from datasets import get_dataset
 from gpt import GPT
+from jax.config import config
 from trainers import AtariTrainer, AtariTrainerConfig
 from utils import set_global_seed
 
@@ -30,10 +30,18 @@ flags.DEFINE_integer("batch_size", 128, "Batch size")
 flags.DEFINE_integer("n_layer", 6, "Number of layers in Transformer")
 flags.DEFINE_integer("trajectories_per_buffer", 10, "Number of trajectories to sample from each of the buffers")
 flags.DEFINE_string("data_dir_prefix", "./dqn_replay/", "Data dir prefix")
-flags.DEFINE_string("checkpoint_name", "no_checkpoint", help="Checkpoint name")
+flags.DEFINE_string("sampled_dataset_path", "./dataset_saved/", "Path to sampled dataset")
+flags.DEFINE_float("lr", 6e-4, "Learning rate")
+flags.DEFINE_float("beta1", 0.9, "Beta 1 for Adam optimizer")
+flags.DEFINE_float("beta2", 0.95, "Beta 2 for Adam optimizer")
+flags.DEFINE_string(
+    "checkpoint_path",
+    "no_checkpoint",
+    help="Checkpoint path. wandb flag should be True. wandb run name will be used as checkpoint name.",
+)
 flags.DEFINE_bool("wandb", False, "Log to wandb")
-# TODO(yun-kwak): Add an option for specifying the path of saved dataset
-# TODO(yun-kwak): Make path handling more elegant
+flags.DEFINE_multi_string("wandb_tags", [], help="wandb tags")
+flags.DEFINE_bool("wandb_logging_grads", False, "Log gradients to wandb")
 
 FLAGS = flags.FLAGS
 
@@ -42,42 +50,19 @@ def main(_):
     set_global_seed(FLAGS.seed, pytorch=True)
 
     ds_file_name = (
-        f"dataset_saved/{FLAGS.env_name}/n_buffer{FLAGS.n_buffers}"
+        f"{FLAGS.env_name}/n_buffer{FLAGS.n_buffers}"
         f"_n_step{FLAGS.n_steps}_traj_per_buffer{FLAGS.trajectories_per_buffer}_seed{FLAGS.seed}"
     )
-    is_ds_saved = os.path.exists(ds_file_name)
-    if is_ds_saved:
-        logging.info(f"Loading dataset from {ds_file_name}")
-        ds_file = np.load(ds_file_name)
-        obss, actions, returns, done_idxs, rtgs, timesteps = (
-            ds_file["obss"],
-            ds_file["actions"],
-            ds_file["returns"],
-            ds_file["done_idxs"],
-            ds_file["rtgs"],
-            ds_file["timesteps"],
-        )
-        logging.info("Loaded dataset from the folder")
-    else:
-        logging.info(f"Creating dataset {ds_file_name}")
-        obss, actions, returns, done_idxs, rtgs, timesteps = create_offline_atari_dataset(
-            FLAGS.n_buffers, FLAGS.n_steps, FLAGS.env_name, FLAGS.data_dir_prefix, FLAGS.trajectories_per_buffer
-        )
-        os.makedirs(os.path.dirname(ds_file_name), exist_ok=True)
-        with open(ds_file_name, "wb") as ds_file:
-            np.savez(
-                ds_file,
-                obss=obss,
-                actions=actions,
-                returns=returns,
-                done_idxs=done_idxs,
-                rtgs=rtgs,
-                timesteps=timesteps,
-            )
-        logging.info(f"Saved dataset to {ds_file_name}")
-
-    train_dataset = StateActionReturnDataset(obss, FLAGS.context_len * 3, actions, done_idxs, rtgs, timesteps)
-
+    ds_file_path = os.path.join(FLAGS.sampled_dataset_path, ds_file_name)
+    train_dataset = get_dataset(
+        ds_file_path,
+        FLAGS.n_buffers,
+        FLAGS.n_steps,
+        FLAGS.env_name,
+        FLAGS.data_dir_prefix,
+        FLAGS.trajectories_per_buffer,
+        FLAGS.context_len,
+    )
     mconf = {
         "vocab_size": train_dataset.vocab_size,
         "n_embd": 128,
@@ -97,7 +82,7 @@ def main(_):
             },
             "resid_pdrop": 0.1,
         },
-        "max_timestep": max(timesteps),
+        "max_timestep": max(train_dataset.timesteps),
         "model_type": "reward_conditioned",
         "name": "gpt",
     }
@@ -105,7 +90,8 @@ def main(_):
     tconf = AtariTrainerConfig(
         max_epochs=FLAGS.epochs,
         batch_size=FLAGS.batch_size,
-        learning_rate=6e-4,
+        learning_rate=FLAGS.lr,
+        betas=(FLAGS.beta1, FLAGS.beta2),
         lr_decay=True,
         warmup_tokens=512 * 20,
         final_tokens=2 * len(train_dataset) * FLAGS.context_len * 3,
@@ -113,12 +99,12 @@ def main(_):
         seed=FLAGS.seed,
         model_type=FLAGS.model_type,
         game=FLAGS.env_name,
-        max_timestep=max(timesteps),
+        max_timestep=max(train_dataset.timesteps),
     )
 
     if FLAGS.wandb:
         # TODO(yun-kwak): Make types of config consistent
-        wandb.init(project="UDPlanner", config={"tconf": asdict(tconf), "mconf": mconf})
+        wandb.init(project="dt-jax", config={"tconf": asdict(tconf), "mconf": mconf}, tags=FLAGS.wandb_tags)
         wandb.config.update(FLAGS)
 
     def _fwd(states, actions, rtgs, timestep, is_training):
@@ -131,4 +117,5 @@ def main(_):
 
 
 if __name__ == "__main__":
+    config.config_with_absl()
     app.run(main)

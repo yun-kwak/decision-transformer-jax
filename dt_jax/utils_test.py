@@ -62,7 +62,7 @@ class SampleTest(absltest.TestCase):
             self.rtgs,
             self.exp_result,
         )
-        result = sample(params, model, x, block_size, rtgs=rtgs)
+        result = sample(params, None, model, x, block_size, rtgs=rtgs)
         self.assertTrue(np.array_equal(result, exp_result))
 
     def test_sample_stochastic(self):
@@ -74,7 +74,7 @@ class SampleTest(absltest.TestCase):
             self.rtgs,
             self.exp_result,
         )
-        result = sample(params, model, x, block_size, rtgs=rtgs, sample=True, top_k=2, rng=jax.random.PRNGKey(0))
+        result = sample(params, jax.random.PRNGKey(0), model, x, block_size, rtgs=rtgs, sample=True, top_k=2)
         self.assertTrue(np.array_equal(result, exp_result))
 
     def test_sample_temperature(self):
@@ -88,6 +88,7 @@ class SampleTest(absltest.TestCase):
         )
         result = sample(
             params,
+            jax.random.PRNGKey(0),
             model,
             x,
             block_size,
@@ -95,7 +96,6 @@ class SampleTest(absltest.TestCase):
             sample=True,
             top_k=2,
             temperature=100000,
-            rng=jax.random.PRNGKey(0),
         )
         self.assertFalse(np.array_equal(result, exp_result))
 

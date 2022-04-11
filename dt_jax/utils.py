@@ -93,3 +93,8 @@ def sample(
         # Take the most likely
         _, ix = jax.lax.top_k(logits, k=1)
     return ix
+
+
+def flatten_params(params):
+    for item in hk.data_structures.traverse(params):
+        yield f'{item[0].replace("~/", "")}/{item[1]}', item[2]
