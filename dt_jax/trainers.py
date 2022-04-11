@@ -264,7 +264,7 @@ class AtariTrainer:
         return params, opt_state
 
     def get_returns(self, ret, params, n_epi=10):
-        # TODO(yun-kwak): Optimize evaluation phase(jit, parallel, etc)
+        # TODO(yun-kwak): Parallel evaluation
         args = AtariEnvConfig(self.config.seed, self.config.game.lower())
         env = AtariEnv(args)
         env.eval()
