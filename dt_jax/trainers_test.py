@@ -11,7 +11,7 @@ mconf = {
     "vocab_size": 4,
     "n_embd": 128,
     "n_layer": 6,
-    "context_len": 90,
+    "context_len": 3,
     "embd_pdrop": 0.1,
     "transformer_config": {
         "n_embd": 128,
@@ -19,7 +19,7 @@ mconf = {
             "n_layer": 6,
             "n_head": 8,
             "n_embd": 128,
-            "context_len": 90,
+            "context_len": 3,
             "attn_pdrop": 0.1,
             "resid_pdrop": 0.1,
             "name": "attn",
@@ -33,7 +33,7 @@ mconf = {
 
 tconf = AtariTrainerConfig(
     max_epochs=10,
-    batch_size=128,
+    batch_size=2,
     learning_rate=0.0006,
     betas=(0.9, 0.95),
     lr_decay=True,
@@ -46,10 +46,10 @@ tconf = AtariTrainerConfig(
     max_timestep=3476,
 )
 
-obs = np.ones((1024, 30, 28224), dtype=np.float32)
-actions = np.ones((1024, 30, 1), dtype=np.int32)
-rtgs = np.ones((1024, 30, 1), dtype=np.float32)
-timesteps = np.ones((1024, 1), dtype=np.int32)
+obs = np.ones((4, 1, 28224), dtype=np.float32)
+actions = np.ones((4, 1, 1), dtype=np.int32)
+rtgs = np.ones((4, 1, 1), dtype=np.float32)
+timesteps = np.ones((4, 1), dtype=np.int32)
 
 
 class DummyDataset(Dataset):
@@ -58,7 +58,7 @@ class DummyDataset(Dataset):
         self.actions = actions
         self.rtgs = rtgs
         self.timesteps = timesteps
-        self.block_size = 90 * 3
+        self.block_size = 1 * 3
 
     def __len__(self):
         return len(self.obs)
