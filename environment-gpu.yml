@@ -1,0 +1,10 @@
+name: dt-jax
+channels:
+  - defaults
+dependencies:
+  - python=3.8
+  - conda-forge::cudatoolkit=11.2
+  - conda-forge::cudnn>=8.0.5
+  - pip
+  - pip:
+    - pip-tools

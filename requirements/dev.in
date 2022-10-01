@@ -1,0 +1,17 @@
+# Development requirements
+
+wandb
+tensorboard
+streamlit
+
+# Jupyter
+jupyter
+jupyter_contrib_nbextensions
+jupyterlab
+
+autopep8
+isort
+yapf
+black==20.8b1
+mypy
+pre-commit

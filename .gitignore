@@ -127,3 +127,12 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+.vscode
+*.tmp
+
+logs
+checkpoints
+wandb
+dataset_saved
+ckpt_backup
