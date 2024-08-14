@@ -8,8 +8,8 @@ Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Model
 
 ### Atari
 
-![Atari result 1](imgs/atari_result_1.png)
-![W B Chart 3_26_2022, 5_48_23 AM](https://user-images.githubusercontent.com/85018688/160198790-df5b7724-7436-41e5-a1b7-57123ec538e7.png)
+<img src="imgs/atari_result_1.png" width="800" height="auto">
+<img src="https://user-images.githubusercontent.com/85018688/160198790-df5b7724-7436-41e5-a1b7-57123ec538e7.png" width="800" height="auto">
 ~2x faster training speed, while achieving the evaluation performance comparable to the original implementation.
 
 ## Usage
