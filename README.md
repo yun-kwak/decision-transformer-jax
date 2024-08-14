@@ -2,7 +2,7 @@
 
 Reproduction of 'Decision Transformer: Reinforcement Learning via Sequence Modeling' in JAX and Haiku, based on the paper at <https://arxiv.org/abs/2106.01345>.
 
-<img width="1381" alt="decision-transformer-jax" src="https://user-images.githubusercontent.com/85018688/160403605-fc54ce19-c794-452c-88a0-d27f7943297c.png">
+<img width="1000" height="auto" alt="decision-transformer-jax" src="https://user-images.githubusercontent.com/85018688/160403605-fc54ce19-c794-452c-88a0-d27f7943297c.png">
 
 ## Result
 
